@@ -40,6 +40,13 @@
     back: '<path d="M15 5l-7 7 7 7"/>',
     check: '<path d="M5 12l5 5 9-10"/>',
     shield: '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/>',
+    scan: '<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4M7 9l2 2 3-4 2 3 3-2"/>',
+    snow: '<path d="M12 2v20M4.9 6l14.2 12M19.1 6L4.9 18M9 3l3 3 3-3M9 21l3-3 3 3"/>',
+    plus: '<rect x="3" y="3" width="18" height="18" rx="4"/><path d="M12 8v8M8 12h8"/>',
+    tire: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/>',
+    drop: '<path d="M12 3s6 7 6 11a6 6 0 0 1-12 0c0-4 6-11 6-11z"/>',
+    basket: '<path d="M3 9h18l-2 11H5z"/><path d="M8 9l4-6 4 6"/>',
+    search: '<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>',
     history: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/>'
   };
   function ic(n, s) { return '<svg viewBox="0 0 24 24" width="' + (s || 22) + '" height="' + (s || 22) + '" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + IC[n] + "</svg>"; }
@@ -116,14 +123,15 @@
     var d = new Date(); d.setDate(d.getDate() + 1);
     var minDate = d.toISOString().slice(0, 10);
     var slots = []; for (var m = 9 * 60; m < 21 * 60; m += 30) slots.push(hm(m) + "–" + hm(m + 30));
-    var svc = (draft.promo ? ["Акция: " + draft.promo] : []).concat(draft.svc ? [draft.svc] : []);
+    var svc = (draft.promo ? ["Акция: " + draft.promo] : []).concat(cart);
+    var allSvc = svc.concat(B.services.filter(function (x) { return svc.indexOf(x) < 0; }));
     var h = '<div class="scr">' + top("Запись на ремонт");
     h += car ? '<div class="card tile carrow"><div class="ic">' + ic("car") + "</div><div><b>" + B.marka + " " + esc(car.model) + "</b>" + plate(car) + "</div></div>"
       : '<label class="f">Ваше имя<input class="inp" id="b_name" placeholder="Как к вам обращаться"></label>' +
         '<label class="f">Телефон<input class="inp" id="b_phone" type="tel" placeholder="+7 ___ ___-__-__"></label>' +
         '<div class="f"><label class="f">Модель ' + B.marka + "</label>" + chips("b_model", B.models, "") + "</div>";
     h += '<label class="f">Подразделение<select class="inp" id="b_loc">' + B.locations.map(function (l) { return "<option>" + esc(l.name) + "</option>"; }).join("") + '</select></label><div class="muted small" id="b_addr" style="margin-top:-10px">' + esc(B.locations[0].address) + "</div>";
-    h += '<div class="f"><label class="f">Услуги <span class="muted" style="font-weight:500">(можно несколько)</span></label><div class="chips multi" id="b_svc">' + svc.concat(B.services).map(function (x, i) { return '<button class="chip' + (i < svc.length ? " on" : "") + '" data-v="' + esc(x) + '">' + esc(x) + "</button>"; }).join("") + "</div></div>";
+    h += '<div class="f"><label class="f">Услуги <span class="muted" style="font-weight:500">(можно несколько)</span></label><div class="chips multi" id="b_svc">' + allSvc.map(function (x, i) { return '<button class="chip' + (i < svc.length ? " on" : "") + '" data-v="' + esc(x) + '">' + esc(x) + "</button>"; }).join("") + "</div></div>";
     h += '<label class="f">День<input class="inp" type="date" id="b_date" min="' + minDate + '" value="' + minDate + '"></label>';
     h += '<div class="f"><label class="f">Время</label><div class="slots" id="b_time">' + slots.map(function (t) { return '<button class="chip" data-v="' + t + '">' + t + "</button>"; }).join("") + "</div></div>";
     h += '<label class="f">Комментарий<textarea class="inp" id="b_comment" rows="2" placeholder="Что беспокоит в машине"></textarea></label>';
@@ -148,7 +156,7 @@
     { d: "12.09.2026", t: "Щётки стеклоочистителя: рекомендуется замена" }
   ];
   function plate(c) { return '<span class="plate2"><span>' + esc(c.plate) + "</span><span>" + esc(c.reg) + "</span></span>"; }
-  function demoNote() { return DEMO ? '<div class="demo">Пример. Настоящие данные придут из 1С сервиса.</div>' : ""; }
+  function demoNote(t) { return DEMO ? '<div class="demo">' + (t || "Пример. Настоящие данные придут из 1С сервиса.") + "</div>" : ""; }
   function carRow(c, i) {
     return '<a class="card tile carrow" href="#carinfo/' + i + '"><div class="ic">' + ic("car") + "</div><div style=\"flex:1\"><b>" + B.marka + " " + esc(c.model) + "</b>" + plate(c) + '</div><span class="muted">›</span></a>';
   }
@@ -193,10 +201,40 @@
       '<div class="row2"><label class="f">Год выпуска<input class="inp" inputmode="numeric" placeholder="2019"></label><label class="f">Пробег, км<input class="inp" inputmode="numeric" placeholder="86 000"></label></div>' +
       '<a class="btn" href="#car">Сохранить</a></div>';
   };
-  V.services = function () {
-    return '<div class="scr notabs">' + top("Услуги и цены", true) + '<p class="muted small" style="margin:-6px 0 0">Цены приходят из программы сервиса.</p><div class="card">' + B.services.filter(function (x) { return x !== "Другое"; }).map(function (x) {
-      return '<a class="setrow" href="#book" data-svc="' + esc(x) + '"><span>' + esc(x) + '</span><span class="link small">Записаться</span></a>';
-    }).join("") + "</div></div>";
+  var cart = store.get("cart", []);
+  function catalog() { return B.catalog || [{ name: "Услуги", ic: "wrench", items: B.services }]; }
+  function cartBar() {
+    return cart.length ? '<a class="cartbar" href="#cart">' + ic("basket", 20) + "<span>Выбрано: " + cart.length + "</span><b>Записаться ›</b></a>" : "";
+  }
+  function svcRow(x) {
+    var on = cart.indexOf(x) >= 0;
+    return '<div class="setrow"><span>' + esc(x) + '</span><button class="addsvc' + (on ? " on" : "") + '" data-add="' + esc(x) + '">' + (on ? "✓ В корзине" : "+ Добавить") + "</button></div>";
+  }
+  // Карточка услуги как в боте: галочка слева сверху, название, описание, «Подробнее».
+  function svcCard(x, c) {
+    var on = cart.indexOf(x) >= 0;
+    return '<div class="svc"><div class="ph">' + ic(c.ic, 40) + '<button class="tick' + (on ? " on" : "") + '" data-add="' + esc(x) + '" aria-label="Выбрать">' + (on ? ic("check", 18) : "") + "</button></div>" +
+      "<b>" + esc(x) + "</b></div>";
+  }
+  V.cart = function () {
+    var car = firstCar();
+    return '<div class="scr notabs">' + top("Корзина", true) +
+      (car ? '<div class="card tile carrow"><div class="ic">' + ic("car") + "</div><div><b>" + B.marka + " " + esc(car.model) + "</b>" + plate(car) + "</div></div>" : "") +
+      '<div class="card">' + (cart.length ? cart.map(svcRow).join("") : '<p class="muted">Корзина пуста.</p>') + "</div>" +
+      '<a class="btn line" href="#services">+ Добавить услуги</a>' + (cart.length ? '<a class="btn" href="#book">Перейти к оформлению</a>' : "") + "</div>";
+  };
+  V.services = function (arg) {
+    var cats = catalog(), h = '<div class="scr notabs">';
+    if (arg != null && cats[+arg]) {
+      var c = cats[+arg];
+      h += top(esc(c.name), true) + '<p class="crumbs"><a href="#services">Услуги</a> / ' + esc(c.name) + "</p>" +
+        demoNote("Фото, описания и цены придут из программы сервиса, как в боте.") + '<div class="svcs">' + c.items.map(function (x) { return svcCard(x, c); }).join("") + "</div>";
+    } else {
+      h += top("Услуги и цены", true) + '<label class="searchbox">' + ic("search", 20) + '<input class="inp" id="s_q" placeholder="Найти услугу"></label><div id="s_res" class="card" hidden></div>' +
+        '<div class="cats" id="s_cats">' + cats.map(function (c, i) { return '<a class="cat" href="#services/' + i + '"><div class="ic">' + ic(c.ic, 30) + "</div><b>" + esc(c.name) + "</b><span>" + c.items.length + " " + (c.items.length === 1 ? "услуга" : c.items.length < 5 ? "услуги" : "услуг") + "</span></a>"; }).join("") + "</div>" +
+        '<p class="muted small center" style="margin:0">Цены приходят из программы сервиса.</p>';
+    }
+    return h + cartBar() + "</div>";
   };
 
   V.contacts = function () {
@@ -240,6 +278,18 @@
     bind(r);
   }
 
+  function bindAdd() {
+    app.querySelectorAll("[data-add]").forEach(function (b) {
+      b.onclick = function () {
+        var x = b.getAttribute("data-add"), i = cart.indexOf(x);
+        if (i >= 0) cart.splice(i, 1); else cart.push(x);
+        store.set("cart", cart);
+        if (document.getElementById("s_q") && document.getElementById("s_q").value) { document.getElementById("s_q").oninput(); var bar = app.querySelector(".cartbar"); if (bar) bar.outerHTML = cartBar(); else app.firstChild.insertAdjacentHTML("beforeend", cartBar()); }
+        else render();
+      };
+    });
+  }
+
   function bind(r) {
     app.querySelectorAll("[data-back]").forEach(function (b) { b.onclick = function () { history.back(); }; });
     app.querySelectorAll("[data-skip]").forEach(function (b) { b.onclick = function () { store.set("seen", true); }; });
@@ -251,6 +301,16 @@
         c.querySelectorAll(".chip").forEach(function (x) { x.classList.remove("on"); }); t.classList.add("on");
       };
     });
+    bindAdd();
+    var q = document.getElementById("s_q");
+    if (q) q.oninput = function () {
+      var t = q.value.trim().toLowerCase(), res = document.getElementById("s_res"), all = [];
+      catalog().forEach(function (c) { c.items.forEach(function (x) { if (all.indexOf(x) < 0) all.push(x); }); });
+      var hit = t ? all.filter(function (x) { return x.toLowerCase().indexOf(t) >= 0; }) : [];
+      res.hidden = !t; document.getElementById("s_cats").hidden = !!t;
+      res.innerHTML = hit.length ? hit.map(svcRow).join("") : '<p class="muted">Ничего не нашли. Опишите задачу в комментарии к записи.</p>';
+      bindAdd();
+    };
     app.querySelectorAll("[data-svc]").forEach(function (b) { b.onclick = function () { draft.svc = b.getAttribute("data-svc"); }; });
     if (r === "login") document.getElementById("sendcode").onclick = function () {
       if (!document.getElementById("agree").checked) { alert("Отметьте согласие с политикой конфиденциальности"); return; }
@@ -278,7 +338,7 @@
           car: car || { model: on("b_model")[0] || "" }, services: on("b_svc"), location: loc.value,
           date: val("b_date"), time: on("b_time")[0], comment: val("b_comment")
         };
-        draft = {};
+        draft = {}; cart = []; store.set("cart", cart);
         // TODO: отправка заявки в 1С (как в мини-приложении @BPbazabot).
         if (API) fetch(API + "/booking", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(req) }).catch(function () {});
         location.hash = "sent";

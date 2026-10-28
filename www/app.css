@@ -108,3 +108,25 @@ label.f{display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:60
 .order .closed{background:#3d4450}
 .order .paid{background:var(--ok)}
 .order .sum{font-weight:800}
+.searchbox{position:relative;display:block}
+.searchbox svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--muted)}
+.searchbox .inp{padding-left:44px}
+.cats{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.cat{background:linear-gradient(150deg,var(--accent),var(--accent2));color:#fff;border-radius:18px;padding:16px;min-height:132px;display:flex;flex-direction:column;justify-content:flex-end;gap:2px;position:relative}
+.cat .ic{position:absolute;top:14px;left:14px;width:48px;height:48px;border-radius:14px;background:rgba(255,255,255,.16);display:grid;place-items:center}
+.cat b{font-size:16px;line-height:1.2}
+.cat span{font-size:13px;opacity:.8}
+.addsvc{border:1.5px solid var(--accent);background:#fff;color:var(--accent);border-radius:10px;padding:7px 10px;font-weight:700;font-size:13px;white-space:nowrap;flex:none}
+.addsvc.on{background:var(--accent);color:#fff}
+.setrow{gap:10px}
+.cartbar{position:fixed;left:16px;right:16px;bottom:calc(var(--safe-b) + 16px);max-width:448px;margin:0 auto;background:var(--fg);color:#fff;border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:10px;font-weight:600;z-index:6;box-shadow:0 8px 24px rgba(0,0,0,.2)}
+.cartbar span{flex:1}
+.crumbs{margin:-4px 0 0;font-size:14px;color:var(--muted)}
+.crumbs a{color:var(--accent);font-weight:600}
+.svcs{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.svc{background:#fff;border-radius:16px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.svc .ph{position:relative;aspect-ratio:4/3;background:linear-gradient(150deg,var(--accent),var(--accent2));color:rgba(255,255,255,.85);display:grid;place-items:center}
+.svc .tick{position:absolute;top:10px;left:10px;width:28px;height:28px;border-radius:8px;border:2px solid #fff;background:rgba(255,255,255,.25);display:grid;place-items:center;color:#fff;padding:0}
+.svc .tick.on{background:#22a45d;border-color:#22a45d}
+.svc b{padding:10px 12px 12px;font-size:15px;line-height:1.25}
+.svcs,.cats{margin-bottom:76px}
