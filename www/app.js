@@ -21,8 +21,10 @@
   if (DEMO) {
     store.set("seen", true);
     store.set("user", { phone: "+7 916 000-00-00", name: "Александр" });
-    store.set("car", { model: B.models[1], year: "2019", plate: "А 123 ВС 777", km: "86 400", next: "15 ноября", nextKm: "90 000" });
+    store.set("cars", [{ model: B.models[1], vin: "YV1XZ00000A000000", plate: "а123вс", reg: "777", year: "2019", km: "86 400", last: "12.09.2026", next: "15 ноября", nextKm: "90 000" }]);
   }
+
+  function firstCar() { var c = store.get("cars"); return c && c[0]; }
 
   var IC = {
     home: '<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
@@ -82,7 +84,7 @@
   };
 
   V.home = function () {
-    var car = store.get("car"), user = store.get("user");
+    var car = firstCar(), user = store.get("user");
     var h = '<div class="scr"><div class="top">' + logo() + '<span style="flex:1"></span><a class="back" href="#settings">' + ic("gear") + "</a></div>";
     h += '<div class="hero"><h2>' + (user ? "Здравствуйте, " + esc(user.name) + "!" : "Сервис " + B.marka + " «Билпрайм»") + "</h2>" +
       "<p>" + (B.locations.length > 1 ? B.locations.length + " сервиса в Москве" + (B.id === "volvo" ? " и Мытищах" : "") : "Москва, " + B.locations[0].address.replace("г. Москва, ", "")) + ". Ежедневно 9:00–21:00</p>" +
@@ -93,6 +95,7 @@
     } else {
       h += '<a class="card tile" href="#car"><div class="ic">' + ic("history") + "</div><div><b>История ремонта вашей машины</b><span>Войдите по номеру телефона</span></div></a>";
     }
+    h += '<a class="card tile" href="#services"><div class="ic">' + ic("wrench") + "</div><div><b>Услуги и цены</b><span>" + B.services.length + " услуг, запись в одно касание</span></div></a>";
     h += '<div class="sec">Акции</div><div class="hscroll">' + B.promos.slice(0, 3).map(promoCard).join("") + "</div>";
     h += '<div class="sec">Почему мы</div><div class="list">' + B.advantages.map(function (a) { return '<div class="card tile"><div class="ic">' + ic("shield") + "</div><div><b>" + esc(a[0]) + "</b><span>" + esc(a[1]) + "</span></div></div>"; }).join("") + "</div>";
     return h + "</div>";
@@ -109,51 +112,91 @@
 
   var draft = store.get("draft", {});
   V.book = function () {
-    var user = store.get("user") || {}, car = store.get("car") || {};
+    var user = store.get("user"), car = firstCar();
     var d = new Date(); d.setDate(d.getDate() + 1);
     var minDate = d.toISOString().slice(0, 10);
-    var h = '<div class="scr">' + top("Запись на сервис") +
-      '<label class="f">Ваше имя<input class="inp" id="b_name" value="' + esc(user.name || "") + '" placeholder="Как к вам обращаться"></label>' +
-      '<label class="f">Телефон<input class="inp" id="b_phone" type="tel" value="' + esc(user.phone || "") + '" placeholder="+7 ___ ___-__-__"></label>' +
-      '<div class="f"><label class="f">Модель ' + B.marka + "</label>" + chips("b_model", B.models, car.model) + "</div>" +
-      '<label class="f">Услуга<select class="inp" id="b_service">' + (draft.promo ? '<option selected>Акция: ' + esc(draft.promo) + "</option>" : "") + B.services.map(function (s) { return "<option>" + esc(s) + "</option>"; }).join("") + "</select></label>" +
-      (B.locations.length > 1 ? '<div class="f"><label class="f">Сервис</label>' + chips("b_loc", B.locations.map(function (l) { return l.name; }), B.locations[0].name) + "</div>" : "") +
-      '<div class="row2"><label class="f">Дата<input class="inp" type="date" id="b_date" min="' + minDate + '" value="' + minDate + '"></label>' +
-      '<label class="f">Время<select class="inp" id="b_time">' + ["9:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00"].map(function (t) { return "<option" + (t === "10:00" ? " selected" : "") + ">" + t + "</option>"; }).join("") + "</select></label></div>" +
-      '<label class="f">Комментарий<textarea class="inp" id="b_comment" rows="2" placeholder="Что беспокоит в машине"></textarea></label>' +
-      '<label class="check"><input type="checkbox" id="b_agree"' + (store.get("user") ? " checked" : "") + '><span>Я согласен на обработку персональных данных и принимаю <a href="' + B.privacy + '" target="_blank">политику конфиденциальности</a></span></label>' +
-      '<button class="btn" id="b_send">Отправить заявку</button><p class="muted small center" style="margin:0">Администратор перезвонит и подтвердит время.</p></div>';
-    return h;
+    var slots = []; for (var m = 9 * 60; m < 21 * 60; m += 30) slots.push(hm(m) + "–" + hm(m + 30));
+    var svc = (draft.promo ? ["Акция: " + draft.promo] : []).concat(draft.svc ? [draft.svc] : []);
+    var h = '<div class="scr">' + top("Запись на ремонт");
+    h += car ? '<div class="card tile carrow"><div class="ic">' + ic("car") + "</div><div><b>" + B.marka + " " + esc(car.model) + "</b>" + plate(car) + "</div></div>"
+      : '<label class="f">Ваше имя<input class="inp" id="b_name" placeholder="Как к вам обращаться"></label>' +
+        '<label class="f">Телефон<input class="inp" id="b_phone" type="tel" placeholder="+7 ___ ___-__-__"></label>' +
+        '<div class="f"><label class="f">Модель ' + B.marka + "</label>" + chips("b_model", B.models, "") + "</div>";
+    h += '<label class="f">Подразделение<select class="inp" id="b_loc">' + B.locations.map(function (l) { return "<option>" + esc(l.name) + "</option>"; }).join("") + '</select></label><div class="muted small" id="b_addr" style="margin-top:-10px">' + esc(B.locations[0].address) + "</div>";
+    h += '<div class="f"><label class="f">Услуги <span class="muted" style="font-weight:500">(можно несколько)</span></label><div class="chips multi" id="b_svc">' + svc.concat(B.services).map(function (x, i) { return '<button class="chip' + (i < svc.length ? " on" : "") + '" data-v="' + esc(x) + '">' + esc(x) + "</button>"; }).join("") + "</div></div>";
+    h += '<label class="f">День<input class="inp" type="date" id="b_date" min="' + minDate + '" value="' + minDate + '"></label>';
+    h += '<div class="f"><label class="f">Время</label><div class="slots" id="b_time">' + slots.map(function (t) { return '<button class="chip" data-v="' + t + '">' + t + "</button>"; }).join("") + "</div></div>";
+    h += '<label class="f">Комментарий<textarea class="inp" id="b_comment" rows="2" placeholder="Что беспокоит в машине"></textarea></label>';
+    if (!user) h += '<label class="check"><input type="checkbox" id="b_agree"><span>Я согласен на обработку персональных данных и принимаю <a href="' + B.privacy + '" target="_blank">политику конфиденциальности</a></span></label>';
+    return h + '<button class="btn" id="b_send">Отправить заявку</button><p class="muted small center" style="margin:0">Администратор перезвонит и подтвердит время.</p></div>';
   };
+  function hm(m) { return Math.floor(m / 60) + ":" + ("0" + (m % 60)).slice(-2); }
   function chips(id, arr, on) { return '<div class="chips" id="' + id + '">' + arr.map(function (m) { return '<button class="chip' + (m === on ? " on" : "") + '" data-v="' + esc(m) + '">' + esc(m) + "</button>"; }).join("") + "</div>"; }
 
   V.sent = function () {
     return '<div class="scr notabs center"><div class="ok">' + ic("check", 40) + '</div><h1 style="margin:8px 0 0">Заявка принята</h1><p class="muted">Мы перезвоним в ближайшее время и подтвердим запись.</p><a class="btn" href="#home">На главную</a></div>';
   };
 
-  var DEMO_HIST = [
-    { d: "12.09.2026", w: "Плановое ТО, замена масла и фильтров", s: "18 450 ₽", km: "84 900", r: "Передние колодки — износ 70%, заменить при следующем визите" },
-    { d: "03.04.2026", w: "Замена шин, сход-развал", s: "6 200 ₽", km: "78 300" },
-    { d: "15.11.2025", w: "Диагностика подвески на стенде", s: "0 ₽", km: "74 100", r: "Подвеска в норме" },
-    { d: "22.08.2025", w: "Замена масла в АКПП", s: "21 900 ₽", km: "70 050" }
+  var DEMO_ORDERS = [
+    { n: "1256", d: "12.09.2026", sum: "18 450", st: ["Закрыт", "Оплачен"], works: ["Плановое ТО", "Замена масла в двигателе", "Замена масляного и воздушного фильтров"] },
+    { n: "1061", d: "03.04.2026", sum: "6 200", st: ["Закрыт", "Оплачен"], works: ["Замена шин", "Сход-развал"] },
+    { n: "746", d: "15.11.2025", sum: "4 500", st: ["Закрыт", "Оплачен"], works: ["Диагностика подвески на стенде"] },
+    { n: "540", d: "22.08.2025", sum: "21 900", st: ["Закрыт", "Оплачен"], works: ["Замена масла в АКПП"] }
   ];
+  var DEMO_RECS = [
+    { d: "12.09.2026", t: "Передние тормозные колодки: износ 70%, заменить при следующем визите" },
+    { d: "12.09.2026", t: "Щётки стеклоочистителя: рекомендуется замена" }
+  ];
+  function plate(c) { return '<span class="plate2"><span>' + esc(c.plate) + "</span><span>" + esc(c.reg) + "</span></span>"; }
+  function demoNote() { return DEMO ? '<div class="demo">Пример. Настоящие данные придут из 1С сервиса.</div>' : ""; }
+  function carRow(c, i) {
+    return '<a class="card tile carrow" href="#carinfo/' + i + '"><div class="ic">' + ic("car") + "</div><div style=\"flex:1\"><b>" + B.marka + " " + esc(c.model) + "</b>" + plate(c) + '</div><span class="muted">›</span></a>';
+  }
   V.car = function () {
-    var user = store.get("user"), car = store.get("car");
+    var user = store.get("user"), cars = store.get("cars") || [];
     if (!user) {
-      return '<div class="scr">' + top("Моя машина") +
+      return '<div class="scr">' + top("Мои машины") +
         '<div class="card center" style="display:flex;flex-direction:column;gap:12px;align-items:center;padding:24px 16px"><div class="tile"><div class="ic" style="width:64px;height:64px">' + ic("history", 32) + "</div></div>" +
-        '<b style="font-size:19px">История ремонта</b><p class="muted" style="margin:0">Войдите по номеру телефона, который вы оставляли в сервисе. Мы покажем вашу машину и все работы по ней.</p>' +
+        '<b style="font-size:19px">История ремонта</b><p class="muted" style="margin:0">Войдите по номеру телефона, который вы оставляли в сервисе. Мы покажем ваши машины, заказ-наряды и рекомендации мастера.</p>' +
         '<a class="btn" href="#login">Войти по номеру телефона</a></div></div>';
     }
-    var h = '<div class="scr">' + top("Моя машина");
-    if (DEMO) h += '<div class="demo">Пример. Настоящие данные придут из 1С сервиса.</div>';
-    h += '<div class="card" style="display:flex;flex-direction:column;gap:14px"><div class="carhead"><div><b>' + B.marka + " " + esc(car.model) + '</b><div class="muted small">' + esc(car.year) + " · пробег " + esc(car.km) + ' км</div></div><span class="plate">' + esc(car.plate) + "</span></div>" +
-      '<div class="next"><div class="ic">' + ic("bell") + '</div><div class="small">Следующее ТО: <b>' + esc(car.next) + "</b><br>или на " + esc(car.nextKm) + " км, что наступит раньше</div></div>" +
-      '<a class="btn" href="#book">Записаться на ТО</a></div>';
-    h += '<div class="sec">История ремонта</div><div class="card hist">' + DEMO_HIST.map(function (x) {
-      return '<div class="it"><span class="d">' + x.d + " · " + x.km + ' км</span><span class="w">' + esc(x.w) + '</span><span class="s">' + x.s + "</span>" + (x.r ? '<span class="r">Мастер: <em>' + esc(x.r) + "</em></span>" : "") + "</div>";
-    }).join("") + "</div>";
+    var c = cars[0];
+    var h = '<div class="scr">' + top("Мои машины") + demoNote() + '<div class="list">' + cars.map(carRow).join("") + "</div>" +
+      '<a class="btn line" href="#addcar">+ Добавить машину</a>';
+    if (c) h += '<div class="card next"><div class="ic">' + ic("bell") + '</div><div class="small">' + esc(c.model) + ": следующее ТО <b>" + esc(c.next) + "</b><br>или на " + esc(c.nextKm) + " км, что наступит раньше</div></div>";
     return h + "</div>";
+  };
+  V.carinfo = function (arg) {
+    var c = (store.get("cars") || [])[+arg || 0];
+    if (!c) return V.car();
+    var rows = [["Модель", B.marka + " " + c.model], ["VIN", c.vin], ["Гос. номер", c.plate + c.reg], ["Год выпуска", c.year + " г"], ["Зафиксированный пробег", c.km + " км"], ["Последний визит", c.last]];
+    return '<div class="scr notabs">' + top(B.marka + " " + esc(c.model), true) + demoNote() +
+      '<div class="card">' + rows.map(function (r) { return '<div class="setrow"><span class="muted" style="font-weight:500">' + r[0] + "</span><span>" + esc(r[1]) + "</span></div>"; }).join("") + "</div>" +
+      '<a class="btn" href="#book">Записаться</a><div class="row2"><a class="btn ghost" href="#orders/' + (+arg || 0) + '">Заказы</a><a class="btn ghost" href="#recs/' + (+arg || 0) + '">Рекомендации</a></div></div>';
+  };
+  V.orders = function (arg) {
+    var c = (store.get("cars") || [])[+arg || 0] || {};
+    return '<div class="scr notabs">' + top("Заказы", true) + demoNote() + '<div class="list">' + DEMO_ORDERS.map(function (o) {
+      return '<div class="card order"><div class="oh"><div><b>Заказ-наряд №' + o.n + '</b><div class="muted small">от ' + o.d + " · " + B.marka + " " + esc(c.model) + '</div></div><div class="st">' + o.st.map(function (x, i) { return '<span class="' + (i ? "paid" : "closed") + '">' + x + "</span>"; }).join("") + "</div></div>" +
+        '<div class="small">' + o.works.map(esc).join("<br>") + '</div><div class="sum">Сумма: ' + o.sum + " ₽</div></div>";
+    }).join("") + "</div></div>";
+  };
+  V.recs = function () {
+    return '<div class="scr notabs">' + top("Рекомендации", true) + demoNote() + '<p class="muted small" style="margin:-6px 0 0">Что мастер советует сделать при следующем визите.</p><div class="list">' + DEMO_RECS.map(function (r) {
+      return '<div class="card tile"><div class="ic">' + ic("wrench") + "</div><div><b>" + esc(r.t) + "</b><span>Осмотр " + r.d + "</span></div></div>";
+    }).join("") + '</div><a class="btn" href="#book">Записаться</a></div>';
+  };
+  V.addcar = function () {
+    return '<div class="scr notabs">' + top("Добавить машину", true) +
+      '<label class="f">Модель<select class="inp">' + B.models.map(function (m) { return "<option>" + esc(m) + "</option>"; }).join("") + "</select></label>" +
+      '<label class="f">Гос. номер<input class="inp" placeholder="а123вс777"></label><label class="f">VIN (необязательно)<input class="inp" placeholder="17 знаков"></label>' +
+      '<div class="row2"><label class="f">Год выпуска<input class="inp" inputmode="numeric" placeholder="2019"></label><label class="f">Пробег, км<input class="inp" inputmode="numeric" placeholder="86 000"></label></div>' +
+      '<a class="btn" href="#car">Сохранить</a></div>';
+  };
+  V.services = function () {
+    return '<div class="scr notabs">' + top("Услуги и цены", true) + '<p class="muted small" style="margin:-6px 0 0">Цены приходят из программы сервиса.</p><div class="card">' + B.services.filter(function (x) { return x !== "Другое"; }).map(function (x) {
+      return '<a class="setrow" href="#book" data-svc="' + esc(x) + '"><span>' + esc(x) + '</span><span class="link small">Записаться</span></a>';
+    }).join("") + "</div></div>";
   };
 
   V.contacts = function () {
@@ -161,7 +204,8 @@
     var cLon = L.reduce(function (s, l) { return s + l.ll[0]; }, 0) / L.length, cLat = L.reduce(function (s, l) { return s + l.ll[1]; }, 0) / L.length;
     var pts = L.map(function (l, i) { return l.ll[0] + "," + l.ll[1] + ",pm2rdl" + (i + 1); }).join("~");
     var src = "https://yandex.ru/map-widget/v1/?ll=" + cLon + "," + cLat + "&z=" + (L.length > 2 ? 10 : 11) + "&pt=" + pts;
-    var h = '<div class="scr">' + top("Контакты") + '<div class="map"><div class="ph">Яндекс Карта со всеми сервисами</div><iframe src="' + src + '" loading="lazy"></iframe></div>';
+    var h = '<div class="scr">' + top("Контакты") + (L.length > 1 ? '<select class="inp" id="c_loc"><option value="">Все сервисы</option>' + L.map(function (l, i) { return '<option value="' + i + '">' + esc(l.name) + "</option>"; }).join("") + "</select>" : "") +
+      '<div class="map"><div class="ph">Яндекс Карта</div><iframe id="c_map" src="' + src + '" loading="lazy"></iframe></div>';
     h += L.map(function (l, i) {
       return '<div class="card loc"><div><b>' + (L.length > 1 ? (i + 1) + ". " : "") + esc(l.name) + '</b><div class="muted small">' + esc(l.address) + "<br>" + esc(l.hours) + "</div></div>" +
         '<div class="row2"><a class="btn" href="' + tel() + '">' + ic("phone", 20) + 'Позвонить</a><a class="btn ghost" href="' + routeUrl(l) + '" target="_blank">' + ic("route", 20) + "Маршрут</a></div></div>";
@@ -186,9 +230,10 @@
 
   var TABBED = { home: 1, book: 1, car: 1, promos: 1, contacts: 1 };
   function render() {
-    var r = (location.hash || "").slice(1) || (store.get("seen") ? "home" : "welcome");
+    var parts = ((location.hash || "").slice(1) || (store.get("seen") ? "home" : "welcome")).split("/");
+    var r = parts[0];
     if (!V[r]) r = "home";
-    app.innerHTML = V[r]();
+    app.innerHTML = V[r](parts[1]);
     tabs.hidden = !TABBED[r];
     tabs.querySelectorAll("a").forEach(function (a) { a.classList.toggle("on", a.getAttribute("data-tab") === r); });
     window.scrollTo(0, 0);
@@ -199,9 +244,14 @@
     app.querySelectorAll("[data-back]").forEach(function (b) { b.onclick = function () { history.back(); }; });
     app.querySelectorAll("[data-skip]").forEach(function (b) { b.onclick = function () { store.set("seen", true); }; });
     app.querySelectorAll("[data-promo]").forEach(function (b) { b.onclick = function () { draft.promo = b.getAttribute("data-promo"); }; });
-    app.querySelectorAll(".chips").forEach(function (c) {
-      c.onclick = function (e) { var t = e.target.closest(".chip"); if (!t) return; e.preventDefault(); c.querySelectorAll(".chip").forEach(function (x) { x.classList.remove("on"); }); t.classList.add("on"); };
+    app.querySelectorAll(".chips,.slots").forEach(function (c) {
+      c.onclick = function (e) {
+        var t = e.target.closest(".chip"); if (!t) return; e.preventDefault();
+        if (c.classList.contains("multi")) { t.classList.toggle("on"); return; }
+        c.querySelectorAll(".chip").forEach(function (x) { x.classList.remove("on"); }); t.classList.add("on");
+      };
     });
+    app.querySelectorAll("[data-svc]").forEach(function (b) { b.onclick = function () { draft.svc = b.getAttribute("data-svc"); }; });
     if (r === "login") document.getElementById("sendcode").onclick = function () {
       if (!document.getElementById("agree").checked) { alert("Отметьте согласие с политикой конфиденциальности"); return; }
       store.set("pendingPhone", document.getElementById("ph").value);
@@ -213,24 +263,38 @@
       store.set("user", { phone: store.get("pendingPhone", ""), name: "" });
       location.hash = "car";
     };
-    if (r === "book") document.getElementById("b_send").onclick = function () {
-      if (!document.getElementById("b_agree").checked) { alert("Отметьте согласие с политикой конфиденциальности"); return; }
-      if (!document.getElementById("b_phone").value.trim()) { alert("Укажите телефон"); return; }
-      var on = function (id) { var x = document.querySelector("#" + id + " .on"); return x ? x.getAttribute("data-v") : ""; };
-      var req = {
-        brand: B.id, name: document.getElementById("b_name").value, phone: document.getElementById("b_phone").value,
-        model: on("b_model"), service: document.getElementById("b_service").value, location: on("b_loc") || B.locations[0].name,
-        date: document.getElementById("b_date").value, time: document.getElementById("b_time").value, comment: document.getElementById("b_comment").value
+    if (r === "book") {
+      var loc = document.getElementById("b_loc");
+      loc.onchange = function () { document.getElementById("b_addr").textContent = B.locations[loc.selectedIndex].address; };
+      document.getElementById("b_send").onclick = function () {
+        var user = store.get("user"), car = firstCar();
+        var val = function (id) { var x = document.getElementById(id); return x ? x.value.trim() : ""; };
+        var on = function (id) { return Array.prototype.map.call(document.querySelectorAll("#" + id + " .on"), function (x) { return x.getAttribute("data-v"); }); };
+        if (!user && !document.getElementById("b_agree").checked) { alert("Отметьте согласие с политикой конфиденциальности"); return; }
+        if (!user && !val("b_phone")) { alert("Укажите телефон"); return; }
+        if (!on("b_time").length) { alert("Выберите время"); return; }
+        var req = {
+          brand: B.id, name: user ? user.name : val("b_name"), phone: user ? user.phone : val("b_phone"),
+          car: car || { model: on("b_model")[0] || "" }, services: on("b_svc"), location: loc.value,
+          date: val("b_date"), time: on("b_time")[0], comment: val("b_comment")
+        };
+        draft = {};
+        // TODO: отправка заявки в 1С (как в мини-приложении @BPbazabot).
+        if (API) fetch(API + "/booking", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(req) }).catch(function () {});
+        location.hash = "sent";
       };
-      draft = {};
-      // TODO: отправка заявки туда же, куда форма с сайта.
-      if (API) fetch(API + "/booking", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(req) }).catch(function () {});
-      location.hash = "sent";
-    };
+    }
+    if (r === "contacts" && document.getElementById("c_loc")) {
+      var sel = document.getElementById("c_loc"), map = document.getElementById("c_map"), all = map.src;
+      sel.onchange = function () {
+        var l = B.locations[+sel.value];
+        map.src = sel.value === "" ? all : "https://yandex.ru/map-widget/v1/?ll=" + l.ll[0] + "," + l.ll[1] + "&z=16&pt=" + l.ll[0] + "," + l.ll[1] + ",pm2rdl";
+      };
+    }
     if (r === "settings") {
       var lo = document.getElementById("logout"), da = document.getElementById("delacc");
-      if (lo) lo.onclick = function () { store.set("user", null); store.set("car", null); location.hash = "home"; };
-      if (da) da.onclick = function () { if (confirm("Удалить аккаунт и все данные в приложении?")) { store.set("user", null); store.set("car", null); location.hash = "home"; } };
+      if (lo) lo.onclick = function () { store.set("user", null); store.set("cars", null); location.hash = "home"; };
+      if (da) da.onclick = function () { if (confirm("Удалить аккаунт и все данные в приложении?")) { store.set("user", null); store.set("cars", null); location.hash = "home"; } };
     }
   }
 

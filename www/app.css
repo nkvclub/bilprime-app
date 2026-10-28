@@ -94,3 +94,17 @@ label.f{display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:60
 .setrow{display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-bottom:1px solid var(--line);font-weight:600}
 .setrow:last-child{border-bottom:0}
 .danger{color:#c62828}
+.plate2{display:inline-flex;border:1.5px solid var(--fg);border-radius:6px;font-weight:700;font-size:13px;margin-top:4px;overflow:hidden}
+.plate2 span{padding:1px 7px}
+.plate2 span+span{border-left:1.5px solid var(--fg)}
+.carrow b{display:block}
+.slots{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.slots .chip{padding:9px 4px;font-size:13px;text-align:center}
+.slots .chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.order{display:flex;flex-direction:column;gap:8px}
+.order .oh{display:flex;justify-content:space-between;gap:10px}
+.order .st{display:flex;flex-direction:column;gap:4px;align-items:flex-end}
+.order .st span{font-size:12px;font-weight:700;border-radius:8px;padding:2px 9px;color:#fff;white-space:nowrap}
+.order .closed{background:#3d4450}
+.order .paid{background:var(--ok)}
+.order .sum{font-weight:800}
